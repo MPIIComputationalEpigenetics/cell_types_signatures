@@ -169,3 +169,37 @@ check_status(h3k27ac_request_ids)
 h3k27ac_data <- usecase_1_download_score_matrices(request_ids = h3k27ac_request_ids,
                                                    experiments_meta = experiments_meta_h3k27ac)
 
+lower_h3k27ac_ranks <- compute_cell_type_scores(h3k27ac_data$mean_matrix, 
+                                            h3k27ac_data$sd_matrix)
+
+higher_h3k27ac_ranks <- compute_cell_type_scores(h3k27ac_data$mean_matrix, 
+                                             h3k27ac_data$sd_matrix,
+                                             invert = TRUE)
+
+unique_biosources_h3k27ac <- as.character(unique(experiments_meta_h3k27ac$user_celltype))
+
+#min.num.of.regions -> include at least 500 regions, include remaining regions with the same rank score
+#max.num.of.regions -> if more than 500 regions have been selected draw a random subset of 500
+#reduced to 100 regions for plotting a heatmap
+h3k27ac_higher_signatures <- generate_cell_type_signatures(unique_biosources_h3k27ac, h3k27ac_data$regions, 
+                                                  higher_h3k27ac_ranks$`worst rank`,
+                                                  min.num.of.regions = 100,
+                                                  max.num.of.regions = 100)
+h3k27ac_lower_signatures <- generate_cell_type_signatures(unique_biosources_h3k27ac, h3k27ac_data$regions, 
+                                                 lower_h3k27ac_ranks$`worst rank`,
+                                                 min.num.of.regions = 100,
+                                                 max.num.of.regions = 100)
+
+# bonus: Keep all regions that are part of a signature and plot a heatmap with a random subset of 5000
+source("source/heatmap.R")
+plot_heatmap(signatures = h3k27ac_lower_signatures,
+             mean_df_matrix = dna_meth_data$mean_df,
+             experiments_meta = experiments_meta,
+             signature_score_numeric = signature_score_numeric,
+             filename = "H3K27ac_lower")
+
+plot_heatmap(signatures = h3k27ac_higher_signatures,
+             mean_df_matrix = dna_meth_data$mean_df,
+             experiments_meta = experiments_meta,
+             signature_score_numeric = signature_score_numeric,
+             filename = "H3K27ac_higher")
