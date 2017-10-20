@@ -1,6 +1,3 @@
-library(gplots)
-library(RColorBrewer)
-
 plot_heatmap <- function(signatures, mean_df_matrix, experiments_meta, 
                          signature_score_numeric, filename)
 {

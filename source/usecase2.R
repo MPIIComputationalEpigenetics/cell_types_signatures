@@ -1,36 +1,35 @@
 #hypomethylated regions
 
-compute_cell_type_hypo_meth_scores <- function(mean_score_matrix, sd_score_matrix){
-  
+compute_cell_type_scores <- function(mean_score_matrix, sd_score_matrix, invert = FALSE){
+    
+  if(invert){
+    sign_for_score <- -1
+    direction <- "higher"
+    sign_for_label <- "+"
+  } 
+  else{
+    sign_for_score <- 1
+    direction <- "lower"
+    sign_for_label <- "-"
+  } 
   #the three metrices described above
-  mean_meth <- t(apply(mean_score_matrix, 
+  mean_score <- t(apply(sign_for_score * mean_score_matrix, 
                        1, rank, ties.method = "max") - 1)
-  mean_meth_minus_1_sd <- t(apply((mean_score_matrix - sd_score_matrix), 
+  mean_1_sd <- t(apply(sign_for_score * (mean_score_matrix - sd_score_matrix), 
                                   1, rank, ties.method = "max") - 1)
-  mean_meth_minus_2_sd <- t(apply((mean_score_matrix - (2 * sd_score_matrix)), 
+  mean_2_sd <- t(apply(sign_for_score * (mean_score_matrix - (2 * sd_score_matrix)), 
                                   1, rank, ties.method = "max") - 1)
   
   #the worst rank
-  worst_rank <- pmax(mean_meth, mean_meth_minus_1_sd, mean_meth_minus_2_sd)
+  worst_rank <- pmax(mean_score, mean_1_sd, mean_2_sd)
   
   #combine regions with ranks
-  result <- list(mean_meth, mean_meth_minus_1_sd, mean_meth_minus_2_sd, worst_rank)
-  names(result) <- c("number of cell types with lower average methylation", 
-                     "number of cell types with lower (average methylation - SD)",
-                     "number of cell types with lower (average methylation - 2*SD)",
+  result <- list(mean_score, mean_1_sd, mean_2_sd, worst_rank)
+  names(result) <- c(paste("number of cell types with score", direction, "than average"), 
+                     paste("number of cell types with score", direction, "than (average", sign_for_label, "SD)"),
+                     paste("number of cell types with score", direction, "than (average", sign_for_label, "2*SD)"),
                      "worst rank")
   return(result)
-}
-
-#hypermethylated regions 
-
-convert_hypo_to_hyper <- function(hypo_meth_ranks){
-  #reverse ranking for turning hypo into hypermethylation ranks
-  hyper_meth_ranks <- lapply(hypo_meth_ranks, 
-                             function(rank_matrix) { max(rank_matrix[1,]) - rank_matrix })
-  
-  names(hyper_meth_ranks) <- str_replace(names(hyper_meth_ranks), "lower", "higher")
-  return(hyper_meth_ranks)
 }
 
 #generate a list of cell type signatures

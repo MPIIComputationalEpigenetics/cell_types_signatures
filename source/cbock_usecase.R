@@ -1,3 +1,4 @@
+# Load all package dependencies. install if missing!
 library(DeepBlueR)
 library(ggplot2)
 library(dplyr)
@@ -5,6 +6,9 @@ library(foreach)
 library(xlsx)
 library(matrixStats)
 library(stringr)
+library(data.table)
+library(gplots)
+library(RColorBrewer)
 
 # Goal: establish a comprehensive list of marker regions that epigenetically identify a cell type of interest (e.g. for the development of cell type specific biomarkers)
 
@@ -85,22 +89,28 @@ dna_meth_data <- usecase_1_download_score_matrices(request_ids = dna_meth_reques
 
 source("source/usecase2.R")
 
-hypo_meth_ranks <- compute_cell_type_hypo_meth_scores(dna_meth_data$mean_matrix, 
-                                                      dna_meth_data$sd_matrix)
+hypo_meth_ranks <- compute_cell_type_scores(dna_meth_data$mean_matrix, 
+                                            dna_meth_data$sd_matrix)
 
-hyper_meth_ranks <- convert_hypo_to_hyper(hypo_meth_ranks)
+hyper_meth_ranks <- compute_cell_type_scores(dna_meth_data$mean_matrix, 
+                                             dna_meth_data$sd_matrix,
+                                             invert = TRUE)
 
-unique_biosources <- unique(experiments_meta$user_celltype)
+unique_biosources <- as.character(unique(experiments_meta$user_celltype))
+
+#min.num.of.regions -> include at least 500 regions, include remaining regions with the same rank score
+#max.num.of.regions -> if more than 500 regions have been selected draw a random subset of 500
+#reduced to 100 regions for plotting a heatmap
 hyper_signatures <- generate_cell_type_signatures(unique_biosources, dna_meth_data$regions, 
                                                   hyper_meth_ranks$`worst rank`,
-                                                  min.num.of.regions = 500,
-                                                  max.num.of.regions = 500)
+                                                  min.num.of.regions = 100,
+                                                  max.num.of.regions = 100)
 hypo_signatures <- generate_cell_type_signatures(unique_biosources, dna_meth_data$regions, 
                                                  hypo_meth_ranks$`worst rank`,
-                                                 min.num.of.regions = 500,
-                                                 max.num.of.regions = 500)
+                                                 min.num.of.regions = 100,
+                                                 max.num.of.regions = 100)
 
-# bonus: Keep all regions that are part of a signature and plot a heatmap
+# bonus: Keep all regions that are part of a signature and plot a heatmap with a random subset of 5000
 source("source/heatmap.R")
 plot_heatmap(signatures = hypo_signatures,
             mean_df_matrix = dna_meth_data$mean_df,
@@ -108,7 +118,7 @@ plot_heatmap(signatures = hypo_signatures,
             signature_score_numeric = signature_score_numeric,
             filename = "DNA_meth_hypo")
 
-plot_heatmap(signatures = hypo_signatures,
+plot_heatmap(signatures = hyper_signatures,
              mean_df_matrix = dna_meth_data$mean_df,
              experiments_meta = experiments_meta,
              signature_score_numeric = signature_score_numeric,
