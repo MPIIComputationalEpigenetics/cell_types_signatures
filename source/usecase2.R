@@ -12,13 +12,39 @@ compute_cell_type_scores <- function(mean_score_matrix, sd_score_matrix, invert 
     direction <- "lower"
     sign_for_label <- "-"
   } 
-  #the three metrices described above
+  #the three metrices described above. The first one is simply the rank
   mean_score <- t(apply(sign_for_score * mean_score_matrix, 
                        1, rank, ties.method = "max") - 1)
-  mean_1_sd <- t(apply(sign_for_score * (mean_score_matrix - sd_score_matrix), 
-                                  1, rank, ties.method = "max") - 1)
-  mean_2_sd <- t(apply(sign_for_score * (mean_score_matrix - (2 * sd_score_matrix)), 
-                                  1, rank, ties.method = "max") - 1)
+  
+  #the other two are more complicated since we need to get the rank of the average 
+  #DNA methylation in the matrix that was modified by subtracting the SD...
+  #We thus add the average DNA methylation to the SD modified matrix and rank them together
+  #This has to be done for each cell type indivdually.
+  
+  compute_ranks_in_sd_matrix <- function(multiplier){
+  
+    overall_result <- foreach(cell_type_index = seq_len(ncol(mean_score_matrix)), 
+              .export = c("mean_score_matrix", "sd_score_matrix", "sign_for_score"),
+              .combine = cbind,
+              .inorder = TRUE, #otherwise the cell types would be mixed up in paralellization
+              .final = function(x) {  
+                                    colnames(x) <- colnames(mean_score_matrix) 
+                                    rownames(x) <- rownames(mean_score_matrix)
+                                    return(x)  
+                                 }) %dopar%
+    {
+      current_cell_type <- mean_score_matrix[,cell_type_index]
+      result <- t(apply(sign_for_score * cbind(current_cell_type, 
+            (mean_score_matrix[,-cell_type_index] - multiplier * sd_score_matrix[,-cell_type_index])), 
+              1, rank, ties.method = "max") - 1)
+      
+      return(result[,1]) #return only first column with ranks of the respective cell type
+    }
+    return(overall_result)
+  }
+  
+  mean_1_sd <- compute_ranks_in_sd_matrix(1)
+  mean_2_sd <- compute_ranks_in_sd_matrix(2)
   
   #the worst rank
   worst_rank <- pmax(mean_score, mean_1_sd, mean_2_sd)
@@ -48,7 +74,7 @@ generate_cell_type_signatures <- function(unique_biosources, regions, ranks,
               top_n(min.num.of.regions, -celltypes_scoring_better)  
             if(!is.null(max.num.of.regions)){
               #return a random sample of regions
-              result <- result %>% sample_n(max.num.of.regions)
+              result <- result %>% sample_n(min(nrow(result), max.num.of.regions))
             } 
             return(result)
           }
