@@ -28,9 +28,11 @@ library(testthat)
 # first we identify suitable biosource terms
 biosource_blood <- deepblue_get_biosource_related("hematopoietic cell")
 
+biosource_names <- c(deepblue_extract_names(biosource_blood), "cytotoxic CD56-dim natural killer cell")
+
 # we identify experimental files in BLUEPRINT for those biosource terms
 selected_experiments <- deepblue_list_experiments(genome = "GRCh38",
-                                                  biosource = deepblue_extract_names(biosource_blood),
+                                                  biosource = biosource_names,
                                                   project = "BLUEPRINT Epigenome",
                                                   epigenetic_mark = "DNA methylation")
 
