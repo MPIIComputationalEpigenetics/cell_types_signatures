@@ -69,10 +69,10 @@ ggplot(plot_data, aes(x = user_celltype, y = count)) + geom_bar(stat = "identity
 # 3. Annotate each region with the mean and standard deviation (alternatively: median, 5th percentile, and 95th percentile) of the region's DNA methylation status in all samples of a given cell_type
 # 4. Export the resulting [region] x [cell_type] table for manual filtering in R
 
-# NOTE: not sure what you mean by grouping by cell type. grouping is not supported in DeepBlue and has to be done 
+# NOTE: not sure what you mean by grouping by cell type. grouping is not supported in DeepBlue and has to be done
 # after downloading the data in R. please elaborate how we should group multiple samples, e.g. mean of the median and SD?
 
-# We split the matrix generation by chromosome to make it more efficient. 
+# We split the matrix generation by chromosome to make it more efficient.
 # First we ask DeepBlue for the chromosome names it uses.
 # NOTE: could be you also would want to remove the sex chromosomes here but we left them in
 
@@ -100,14 +100,15 @@ dna_meth_data <- usecase_1_download_score_matrices(request_ids = dna_meth_reques
 
 source("source/usecase2.R")
 
-hypo_meth_ranks <- compute_cell_type_scores(dna_meth_data$mean_matrix, 
+hypo_meth_ranks <- compute_cell_type_scores(dna_meth_data$mean_matrix,
                                             dna_meth_data$sd_matrix)
 
-hyper_meth_ranks <- compute_cell_type_scores(dna_meth_data$mean_matrix, 
+hyper_meth_ranks <- compute_cell_type_scores(dna_meth_data$mean_matrix,
                                              dna_meth_data$sd_matrix,
                                              invert = TRUE)
 
 #check if the rank computations are correct using a random region and cell type
+source("source/testing.R")
 testing(dna_meth_data$mean_matrix, dna_meth_data$sd_matrix, hypo_meth_ranks, hyper_meth_ranks)
 
 #get unique biosources for extracting signatures
@@ -116,18 +117,18 @@ unique_biosources <- as.character(unique(experiments_meta$user_celltype))
 #min.num.of.regions -> include at least 500 regions, include remaining regions with the same rank score
 #max.num.of.regions -> if more than x regions have been selected draw a random subset of x
 #choose small x for example to make heatmaps feasible.
-hyper_signatures <- generate_cell_type_signatures(unique_biosources, dna_meth_data$regions, 
+hyper_signatures <- generate_cell_type_signatures(unique_biosources, dna_meth_data$regions,
                                                   hyper_meth_ranks$`worst rank`,
                                                   min.num.of.regions = 100,
                                                   max.num.of.regions = NULL)
-hypo_signatures <- generate_cell_type_signatures(unique_biosources, dna_meth_data$regions, 
+hypo_signatures <- generate_cell_type_signatures(unique_biosources, dna_meth_data$regions,
                                                  hypo_meth_ranks$`worst rank`,
                                                  min.num.of.regions = 100,
                                                  max.num.of.regions = NULL)
 
 #plot size of individual signatures and heatmaps of a subset of the signatures
 
-# plot number of signature regions for each cell type. 
+# plot number of signature regions for each cell type.
 
 hyper_signatures_df <- rbindlist(hyper_signatures, idcol = "cell_type")
 hyper_signatures_df$status <- "hyper"
@@ -136,19 +137,19 @@ hypo_signatures_df <- rbindlist(hypo_signatures, idcol = "cell_type")
 hypo_signatures_df$status <- "hypo"
 
 ggplot(data = rbind(hypo_signatures_df, hyper_signatures_df),
-       aes(x = cell_type)) + 
+       aes(x = cell_type)) +
   geom_bar(stat = "count") +
   theme_bw() +
   facet_wrap(~status, ncol = 1) +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
 
 # bonus: plot a heatmap with smaller signatures
 
-hyper_signatures_heatmap <- generate_cell_type_signatures(unique_biosources, dna_meth_data$regions, 
+hyper_signatures_heatmap <- generate_cell_type_signatures(unique_biosources, dna_meth_data$regions,
                                                           hyper_meth_ranks$`worst rank`,
                                                           min.num.of.regions = 100,
                                                           max.num.of.regions = 100)
-hypo_signatures_heatmap <- generate_cell_type_signatures(unique_biosources, dna_meth_data$regions, 
+hypo_signatures_heatmap <- generate_cell_type_signatures(unique_biosources, dna_meth_data$regions,
                                                          hypo_meth_ranks$`worst rank`,
                                                          min.num.of.regions = 100,
                                                          max.num.of.regions = 100)
@@ -218,10 +219,10 @@ check_status(h3k27ac_request_ids)
 h3k27ac_data <- usecase_1_download_score_matrices(request_ids = h3k27ac_request_ids,
                                                   experiments_meta = experiments_meta_h3k27ac)
 
-lower_h3k27ac_ranks <- compute_cell_type_scores(h3k27ac_data$mean_matrix, 
+lower_h3k27ac_ranks <- compute_cell_type_scores(h3k27ac_data$mean_matrix,
                                                 h3k27ac_data$sd_matrix)
 
-higher_h3k27ac_ranks <- compute_cell_type_scores(h3k27ac_data$mean_matrix, 
+higher_h3k27ac_ranks <- compute_cell_type_scores(h3k27ac_data$mean_matrix,
                                                  h3k27ac_data$sd_matrix,
                                                  invert = TRUE)
 
@@ -230,11 +231,11 @@ unique_biosources_h3k27ac <- as.character(unique(experiments_meta_h3k27ac$user_c
 #min.num.of.regions -> include at least 500 regions, include remaining regions with the same rank score
 #max.num.of.regions -> if more than 500 regions have been selected draw a random subset of 500
 #reduced to 100 regions for plotting a heatmap
-h3k27ac_higher_signatures <- generate_cell_type_signatures(unique_biosources_h3k27ac, h3k27ac_data$regions, 
+h3k27ac_higher_signatures <- generate_cell_type_signatures(unique_biosources_h3k27ac, h3k27ac_data$regions,
                                                            higher_h3k27ac_ranks$`worst rank`,
                                                            min.num.of.regions = 100,
                                                            max.num.of.regions = 100)
-h3k27ac_lower_signatures <- generate_cell_type_signatures(unique_biosources_h3k27ac, h3k27ac_data$regions, 
+h3k27ac_lower_signatures <- generate_cell_type_signatures(unique_biosources_h3k27ac, h3k27ac_data$regions,
                                                           lower_h3k27ac_ranks$`worst rank`,
                                                           min.num.of.regions = 100,
                                                           max.num.of.regions = 100)
